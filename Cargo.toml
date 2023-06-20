@@ -6,7 +6,7 @@ authors = ["smol-jsonrpc Rust Developers"]
 description = "Messages and related types for implementing the JSON-RPC protocol"
 keywords = ["no-std", "jsonrpc", "rpc", "networking"]
 categories = ["no-std", "network-programming"]
-repository = "https://github.com/smol-jsonrpc/smol-jsonrpc"
+repository = "https://gitlab.com/smol-jsonrpc/smol-jsonrpc"
 license = "MIT"
 
 [dependencies.serde]
