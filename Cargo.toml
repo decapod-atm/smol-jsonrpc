@@ -1,0 +1,23 @@
+[package]
+name = "smol-jsonrpc"
+version = "0.1.0"
+edition = "2021"
+authors = ["smol-jsonrpc Rust Developers"]
+description = "Messages and related types for implementing the JSON-RPC protocol"
+keywords = ["no-std", "jsonrpc", "rpc", "networking"]
+categories = ["no-std", "network-programming"]
+repository = "https://github.com/smol-jsonrpc/smol-jsonrpc"
+license = "MIT"
+
+[dependencies.serde]
+version = "1.0"
+default-features = false
+features = ["alloc", "derive"]
+
+[dependencies.serde_json]
+version = "1.0"
+default-features = false
+features = ["alloc"]
+
+[features]
+std = ["serde/std", "serde_json/std"]
