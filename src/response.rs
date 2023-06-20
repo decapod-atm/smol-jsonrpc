@@ -64,6 +64,11 @@ impl Response {
         serde_json::from_value::<T>(self.result.clone()).map_err(|err| err.into())
     }
 
+    /// Gets whether the result field is [null](serde_json::Value::Null).
+    pub fn result_is_null(&self) -> bool {
+        self.result.is_null()
+    }
+
     /// Sets the [Response] parameters.
     pub fn set_result<T: serde::Serialize>(&mut self, result: T) {
         self.result = json!(result);
@@ -73,6 +78,11 @@ impl Response {
     pub fn with_result<T: serde::Serialize>(mut self, result: T) -> Self {
         self.result = json!(result);
         self
+    }
+
+    /// Gets whether the error field is [null](serde_json::Value::Null).
+    pub fn error_is_null(&self) -> bool {
+        self.error.is_null()
     }
 
     /// Gets the error.
