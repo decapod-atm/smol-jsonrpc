@@ -73,6 +73,11 @@ impl Request {
         self
     }
 
+    /// Gets whether the params field is [null](serde_json::Value::Null).
+    pub fn params_is_null(&self) -> bool {
+        self.params.is_null()
+    }
+
     /// Gets the [Request] parameters.
     ///
     /// Attempts to parse the parameter as the provided type, returns `Err(_)` on failure.
