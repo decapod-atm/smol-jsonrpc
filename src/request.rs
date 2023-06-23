@@ -1,16 +1,16 @@
 use alloc::string::String;
 use serde_json::json;
 
-use crate::{id_from_value, Result};
+use crate::{id_from_value, Error, ErrorCode, Result};
 
 /// A JSON-RPC request object
 #[repr(C)]
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct Request {
     jsonrpc: serde_json::Value,
-    id: serde_json::Value,
-    method: serde_json::Value,
-    params: serde_json::Value,
+    id: Option<serde_json::Value>,
+    method: Option<serde_json::Value>,
+    params: Option<serde_json::Value>,
 }
 
 impl Request {
@@ -18,9 +18,9 @@ impl Request {
     pub fn new() -> Self {
         Self {
             jsonrpc: json!(String::from("2.0")),
-            id: serde_json::Value::Null,
-            method: serde_json::Value::Null,
-            params: serde_json::Value::Null,
+            id: None,
+            method: None,
+            params: None,
         }
     }
 
@@ -28,9 +28,9 @@ impl Request {
     pub fn new_null() -> Self {
         Self {
             jsonrpc: serde_json::Value::Null,
-            id: serde_json::Value::Null,
-            method: serde_json::Value::Null,
-            params: serde_json::Value::Null,
+            id: None,
+            method: None,
+            params: None,
         }
     }
 
@@ -43,56 +43,66 @@ impl Request {
 
     /// Gets the ID.
     pub fn id(&self) -> Option<u64> {
-        id_from_value(&self.id)
+        self.id.as_ref().map(|id| id_from_value(id).unwrap_or(0))
     }
 
     /// Sets the ID.
     pub fn set_id(&mut self, id: u64) {
-        self.id = json!(id);
+        self.id = Some(json!(id));
     }
 
     /// Builder function to set ID.
     pub fn with_id(mut self, id: u64) -> Self {
-        self.id = json!(id);
+        self.set_id(id);
         self
     }
 
     /// Gets the method.
     pub fn method(&self) -> Option<&str> {
-        self.method.as_str()
+        if let Some(m) = self.method.as_ref() {
+            m.as_str()
+        } else {
+            None
+        }
     }
 
     /// Sets the method.
     pub fn set_method(&mut self, method: &str) {
-        self.method = json!(String::from(method));
+        self.method = Some(json!(String::from(method)));
     }
 
     /// Builder function to set method.
     pub fn with_method(mut self, method: &str) -> Self {
-        self.method = json!(String::from(method));
+        self.set_method(method);
         self
     }
 
     /// Gets whether the params field is [null](serde_json::Value::Null).
     pub fn params_is_null(&self) -> bool {
-        self.params.is_null()
+        self.params.is_none()
     }
 
     /// Gets the [Request] parameters.
     ///
     /// Attempts to parse the parameter as the provided type, returns `Err(_)` on failure.
     pub fn params<T: for<'de> serde::Deserialize<'de>>(&self) -> Result<T> {
-        serde_json::from_value::<T>(self.params.clone()).map_err(|err| err.into())
+        if let Some(p) = self.params.as_ref() {
+            serde_json::from_value::<T>(p.clone()).map_err(|err| err.into())
+        } else {
+            Err(Error::new()
+                .with_code(ErrorCode::InvalidParams)
+                .with_message("null Params field"))
+        }
     }
 
     /// Sets the [Request] parameters.
-    pub fn set_params<T: serde::Serialize>(&mut self, params: &T) {
-        self.params = json!(params);
+    pub fn set_params<T: serde::Serialize>(&mut self, params: T) {
+        self.params = Some(json!(params));
     }
 
     /// Builder function to set the [Request] parameters.
     pub fn with_params<T: serde::Serialize>(mut self, params: T) -> Self {
-        self.params = json!(params);
+        self.set_params(params);
         self
     }
 }

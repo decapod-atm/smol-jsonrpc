@@ -10,11 +10,17 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 /// Error type for JSON-RPC specific errors.
 #[repr(C)]
-#[derive(Clone, Debug, serde::Deserialize)]
+#[derive(Clone, Debug, Default, serde::Deserialize)]
 pub struct Error {
     code: ErrorCode,
     message: String,
     data: serde_json::Value,
+}
+
+impl PartialEq for Error {
+    fn eq(&self, oth: &Self) -> bool {
+        self.code == oth.code && self.message == oth.message
+    }
 }
 
 impl serde::Serialize for Error {
@@ -124,9 +130,10 @@ impl fmt::Display for Error {
 /// Non-exhaustive, additional types for server-specific codes may be defined in the future.
 #[repr(i32)]
 #[non_exhaustive]
-#[derive(Clone, Copy, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum ErrorCode {
     /// A parsing error occurred.
+    #[default]
     ParseError = -32700,
     /// An invalid request was made.
     InvalidRequest = -32600,

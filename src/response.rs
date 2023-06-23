@@ -1,16 +1,16 @@
 use alloc::string::String;
 use serde_json::json;
 
-use crate::{id_from_value, Error, Result};
+use crate::{id_from_value, Error, ErrorCode, Result};
 
 /// A JSON-RPC response object
 #[repr(C)]
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct Response {
     jsonrpc: serde_json::Value,
     id: serde_json::Value,
-    result: serde_json::Value,
-    error: serde_json::Value,
+    result: Option<serde_json::Value>,
+    error: Option<serde_json::Value>,
 }
 
 impl Response {
@@ -19,8 +19,8 @@ impl Response {
         Self {
             jsonrpc: json!(String::from("2.0")),
             id: serde_json::Value::Null,
-            error: serde_json::Value::Null,
-            result: serde_json::Value::Null,
+            error: None,
+            result: None,
         }
     }
 
@@ -29,8 +29,8 @@ impl Response {
         Self {
             jsonrpc: serde_json::Value::Null,
             id: serde_json::Value::Null,
-            error: serde_json::Value::Null,
-            result: serde_json::Value::Null,
+            error: None,
+            result: None,
         }
     }
 
@@ -57,54 +57,58 @@ impl Response {
         self
     }
 
+    /// Gets whether the result field is [null](serde_json::Value::Null).
+    pub fn result_is_null(&self) -> bool {
+        self.result.is_none()
+    }
+
     /// Gets the [Response] result.
     ///
     /// Attempts to parse the result as the provided type, returns `Err(_)` on failure.
     pub fn result<T: for<'de> serde::Deserialize<'de>>(&self) -> Result<T> {
-        serde_json::from_value::<T>(self.result.clone()).map_err(|err| err.into())
-    }
-
-    /// Gets whether the result field is [null](serde_json::Value::Null).
-    pub fn result_is_null(&self) -> bool {
-        self.result.is_null()
+        if let Some(res) = self.result.as_ref() {
+            serde_json::from_value::<T>(res.clone()).map_err(|err| err.into())
+        } else {
+            Err(Error::new()
+                .with_code(ErrorCode::InvalidParams)
+                .with_message("null Result field"))
+        }
     }
 
     /// Sets the [Response] parameters.
     pub fn set_result<T: serde::Serialize>(&mut self, result: T) {
-        self.result = json!(result);
+        self.result = Some(json!(result));
     }
 
     /// Builder function to set the [Response] parameters.
     pub fn with_result<T: serde::Serialize>(mut self, result: T) -> Self {
-        self.result = json!(result);
+        self.set_result(result);
         self
     }
 
     /// Gets whether the error field is [null](serde_json::Value::Null).
     pub fn error_is_null(&self) -> bool {
-        self.error.is_null()
+        self.error.is_none()
     }
 
     /// Gets the error.
     pub fn error(&self) -> Option<Error> {
-        if self.error.is_null() {
-            None
-        } else {
-            match serde_json::from_value::<Error>(self.error.clone()) {
-                Ok(err) => Some(err),
-                Err(err) => Some(err.into()),
-            }
-        }
+        self.error
+            .as_ref()
+            .map(|err| match serde_json::from_value::<Error>(err.clone()) {
+                Ok(err) => err,
+                Err(err) => err.into(),
+            })
     }
 
     /// Sets the error.
     pub fn set_error(&mut self, error: Error) {
-        self.error = json!(error);
+        self.error = Some(json!(error));
     }
 
     /// Builder function to set error.
     pub fn with_error(mut self, error: Error) -> Self {
-        self.error = json!(error);
+        self.set_error(error);
         self
     }
 }
