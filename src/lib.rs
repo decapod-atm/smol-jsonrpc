@@ -30,9 +30,9 @@ pub fn id_from_value(val: &serde_json::Value) -> Option<u64> {
     } else if val.is_string() {
         let id_str = val.as_str().unwrap_or("");
 
-        if id_str.contains("-") {
+        if id_str.contains('-') {
             id_str.parse::<i64>().ok().map(|id| id as u64)
-        } else if id_str.contains(".") {
+        } else if id_str.contains('.') {
             id_str.parse::<f64>().ok().map(|id| id as u64)
         } else {
             id_str.parse::<u64>().ok()
