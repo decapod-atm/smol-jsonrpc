@@ -115,11 +115,11 @@ impl fmt::Display for Error {
         let data = self.data();
 
         if data.is_null() {
-            write!(f, "\"code\": {code}, \"message\": \"{message}\"")
+            write!(f, r#""code": {code}, "message": "{message}""#)
         } else {
             write!(
                 f,
-                "\"code\": {code}, \"message\": \"{message}\", \"data\": {data}"
+                r#""code": {code}, "message": "{message}", "data": {data}"#
             )
         }
     }
@@ -130,7 +130,7 @@ impl fmt::Display for Error {
 /// Non-exhaustive, additional types for server-specific codes may be defined in the future.
 #[repr(i32)]
 #[non_exhaustive]
-#[derive(Clone, Copy, Debug, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum ErrorCode {
     /// A parsing error occurred.
     #[default]
@@ -143,6 +143,8 @@ pub enum ErrorCode {
     InvalidParams = -32602,
     /// Internal server error occurred.
     InternalError = -32603,
+    /// Unknown error occured.
+    UnknownError = -32999,
 }
 
 impl ErrorCode {
@@ -172,6 +174,7 @@ impl From<ErrorCode> for &'static str {
             ErrorCode::MethodNotFound => "Method not found",
             ErrorCode::InvalidParams => "Invalid params",
             ErrorCode::InternalError => "Internal error",
+            ErrorCode::UnknownError => "Unknown error",
         }
     }
 }
@@ -182,8 +185,58 @@ impl From<&ErrorCode> for &'static str {
     }
 }
 
+impl From<i32> for ErrorCode {
+    fn from(val: i32) -> Self {
+        match val {
+            v if v == -32700 => Self::ParseError,
+            v if v == -32600 => Self::InvalidRequest,
+            v if v == -32601 => Self::MethodNotFound,
+            v if v == -32602 => Self::InvalidParams,
+            v if v == -32603 => Self::InternalError,
+            _ => Self::UnknownError,
+        }
+    }
+}
+
+impl From<&str> for ErrorCode {
+    fn from(val: &str) -> Self {
+        if let Ok(err) = val.parse::<i32>() {
+            err.into()
+        } else {
+            match val.to_lowercase().as_str() {
+                "parse error" => Self::ParseError,
+                "invalid request" => Self::InvalidRequest,
+                "method not found" => Self::MethodNotFound,
+                "invalid params" => Self::InvalidParams,
+                "internal error" => Self::InternalError,
+                _ => Self::UnknownError,
+            }
+        }
+    }
+}
+
 impl fmt::Display for ErrorCode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} ({})", <&'static str>::from(self), i32::from(self))
+    }
+}
+
+impl serde::Serialize for ErrorCode {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let val = i32::from(self);
+        serde::Serialize::serialize(&val, serializer)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for ErrorCode {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<ErrorCode, D::Error>
+    where
+        D: serde::de::Deserializer<'de>,
+    {
+        let val = <i32 as serde::Deserialize>::deserialize(deserializer)?;
+        Ok(val.into())
     }
 }
